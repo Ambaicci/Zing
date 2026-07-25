@@ -29,7 +29,7 @@ export default {
         mono: ['"IBM Plex Mono"', 'monospace'],
       },
       animation: {
-        'pulse-fast': 'pulse 1.1s infinite ease-in-out',
+        'pulse-slow': 'pulse 1.1s infinite ease-in-out',
       }
     },
   },

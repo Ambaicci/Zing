@@ -1,5 +1,4 @@
-
- import os
+﻿import os
 
 # Load API key securely from environment variables
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")

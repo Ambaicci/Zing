@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   UserPlusIcon, CalendarIcon, ArrowRightOnRectangleIcon, ExclamationTriangleIcon,
   PlusIcon, XMarkIcon, ArrowsRightLeftIcon, CalendarDaysIcon, UsersIcon, SparklesIcon,
+  HomeIcon, Cog6ToothIcon
 } from '@heroicons/react/24/solid';
 import { API_BASE_URL } from '../config';
 import ZingChat from '../components/ZingChat';
@@ -9,7 +10,8 @@ import ScheduleQuery from '../components/ScheduleQuery';
 import OrganizationOnboarding from '../components/OrganizationOnboarding';
 
 const AdminDashboard = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState('roster');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [activeDrawer, setActiveDrawer] = useState('home');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -36,6 +38,12 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [chatActionId, setChatActionId] = useState(null);
   const [chatActionType, setChatActionType] = useState(null);
 
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const chatEndRef = useRef(null);
+
+  // API Fetch Functions
   const fetchEmployees = async () => { try { const res = await fetch(`${API_BASE_URL}/api/admin/employees`); setEmployees(await res.json()); } catch (err) { console.error(err); } };
   const fetchBranches = async () => { try { const res = await fetch(`${API_BASE_URL}/api/branches`); setBranches(await res.json()); } catch (err) { console.error(err); } };
   const fetchRoster = async () => { try { const res = await fetch(`${API_BASE_URL}/api/master-roster`); setRoster(await res.json()); } catch (err) { console.error(err); } };
@@ -52,6 +60,11 @@ const AdminDashboard = ({ user, onLogout }) => {
     fetchTimeOffRequests(); 
   }, []);
 
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, isThinking]);
+
+  // AI Insights
   const zingInsights = useMemo(() => {
     const insights = [];
     const pendingTimeOff = timeOffRequests.filter(r => r.status === 'PENDING');
@@ -68,6 +81,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     return insights;
   }, [timeOffRequests, swapRequests]);
 
+  // Schedule Generation
   const generateRoster = async () => {
     setLoading(true); setMessage('');
     try {
@@ -92,12 +106,17 @@ const AdminDashboard = ({ user, onLogout }) => {
         body: JSON.stringify({ organization_id: "0c8cf570-ccce-416c-b8ec-0723aab90225", start_date: formatDate(startDate), end_date: formatDate(endDate), rotation_type: "none" })
       });
       const data = await response.json();
-      if (data.status === 'success') setMessage(`🧠 AI optimized the schedule! ${data.assignments_created} shifts assigned.`);
-      else setMessage(`AI Response: ${data.message}`);
+      if (data.status === 'success') {
+        setMessage(`🧠 AI optimized the schedule! ${data.assignments_created} shifts assigned.`);
+        setChatMessages(prev => [...prev, { type: 'ai', text: `✅ Schedule generated! ${data.assignments_created} shifts assigned.` }]);
+      } else {
+        setMessage(`AI Response: ${data.message}`);
+      }
       fetchRoster(); fetchEmployees();
     } catch (err) { setMessage('Error generating schedule.'); } finally { setLoading(false); }
   };
 
+  // Exception Creation
   const createException = async () => {
     if (!selectedEmployee) return alert('Please select an employee');
     try {
@@ -110,6 +129,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     } catch (err) { setMessage('Error creating exception'); }
   };
 
+  // Swap Request Handling
   const handleSwapRequest = async (requestId, status) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/swap-request/${requestId}?status=${status}`, { method: 'PUT' });
@@ -118,6 +138,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     } catch (err) { setMessage('Error updating swap request'); }
   };
 
+  // Time Off Request Handling
   const handleTimeOffRequest = async (requestId, status) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/time-off-request/${requestId}?status=${status}`, { method: 'PUT' });
@@ -126,6 +147,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     } catch (err) { setMessage('Error updating time off request'); }
   };
 
+  // Employee Update
   const updateEmployee = async () => {
     if (!editingEmployee) return;
     try {
@@ -137,262 +159,405 @@ const AdminDashboard = ({ user, onLogout }) => {
     } catch (err) { setMessage('Error updating employee'); }
   };
 
+  // Navigation Handler
+  const handleNavigation = (tabName) => {
+    setActiveDrawer(tabName);
+    if (tabName === 'home' || tabName === 'schedule') {
+      setIsDrawerOpen(false);
+    } else {
+      setIsDrawerOpen(true);
+    }
+  };
+
+  // Chat Message Handler
+  const handleChatMessage = (text) => {
+    if (!text.trim()) return;
+    setChatMessages(prev => [...prev, { type: 'user', text }]);
+    setChatInput('');
+    setIsThinking(true);
+
+    setTimeout(() => {
+      setIsThinking(false);
+      const low = text.toLowerCase();
+      if (low.includes('team') || low.includes('staff')) {
+        handleNavigation('team');
+        setChatMessages(prev => [...prev, { type: 'ai', text: 'Opened the team panel for you.' }]);
+      } else if (low.includes('swap')) {
+        handleNavigation('swaps');
+        setChatMessages(prev => [...prev, { type: 'ai', text: `You have ${swapRequests.filter(r => r.status === 'PENDING').length} pending swap requests.` }]);
+      } else if (low.includes('schedule') || low.includes('generate')) {
+        handleNavigation('schedule');
+        setChatMessages(prev => [...prev, { type: 'ai', text: 'Opened the schedule view. Select a duration and click generate.' }]);
+      } else {
+        setChatMessages(prev => [...prev, { type: 'ai', text: 'I can help with scheduling, team management, swaps, and time off. Try clicking a suggestion chip or type "show team".' }]);
+      }
+    }, 1200);
+  };
+
   const getStatusBadge = (status) => {
     const colors = { 'PENDING': 'bg-z-orange/10 text-z-orange', 'APPROVED': 'bg-z-green/10 text-z-green', 'REJECTED': 'bg-z-red/10 text-z-red' };
     return colors[status] || 'bg-z-text-dim/10 text-z-text-dim';
   };
 
-  const tabs = [
-    { id: 'roster', label: 'Schedule', icon: CalendarIcon },
-    { id: 'employees', label: 'Team', icon: UsersIcon },
-    { id: 'exceptions', label: 'Exceptions', icon: ExclamationTriangleIcon, badge: exceptions.length },
-    { id: 'swaps', label: 'Swaps', icon: ArrowsRightLeftIcon, badge: swapRequests.filter(r => r.status === 'PENDING').length },
-    { id: 'timeoff', label: 'Time Off', icon: CalendarDaysIcon, badge: timeOffRequests.filter(r => r.status === 'PENDING').length },
-  ];
-
-  return (
-    <div className="min-h-screen bg-z-page font-body text-z-text pb-20 md:pb-0">
-      {/* ONBOARDING WIZARD OVERLAY */}
-      {showOnboarding && <OrganizationOnboarding onComplete={() => setShowOnboarding(false)} />}
-
-      {/* Top Navigation */}
-      <nav className="sticky top-0 z-30 bg-z-bg/80 backdrop-blur-xl border-b border-z-border">
-        <div className="px-4 py-3 max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-z-purple rounded-lg flex items-center justify-center shadow-[0_0_12px_rgba(191,90,242,0.4)]">
-              <SparklesIcon className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-base font-display font-bold text-z-text tracking-tight">ZING</h1>
-              <p className="text-[10px] text-z-text-dim font-mono font-semibold uppercase tracking-wider">Command Center</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setShowOnboarding(true)} className="text-sm font-semibold text-z-blue hover:text-z-purple transition-colors">
-              Setup Organization
-            </button>
-            <button onClick={onLogout} className="text-sm text-z-text-dim hover:text-z-red transition-colors font-medium">Sign Out</button>
-          </div>
-        </div>
-        {/* Desktop Tabs */}
-        <div className="hidden md:flex px-4 max-w-7xl mx-auto gap-1 border-t border-z-border/50">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${isActive ? 'border-z-purple text-z-purple' : 'border-transparent text-z-text-dim hover:text-z-text'}`}>
-                <Icon className="w-4 h-4" />
-                {tab.label}
-                {tab.badge > 0 && <span className="bg-z-red text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{tab.badge}</span>}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
-      <div className="px-4 py-6 max-w-7xl mx-auto space-y-6">
-        {/* Live AI Insights */}
-        <div className="bg-z-surface rounded-2xl border border-z-border overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-z-border bg-z-surface-hi/50 flex items-center gap-3">
-            <div className="w-8 h-8 bg-z-purple/20 rounded-lg flex items-center justify-center">
-              <SparklesIcon className="w-4 h-4 text-z-purple" />
-            </div>
-            <div>
-              <h3 className="text-sm font-display font-bold text-z-text">Zing AI Briefing</h3>
-              <p className="text-xs text-z-text-dim font-mono">{zingInsights.filter(i => i.action).length} items need your attention</p>
-            </div>
-          </div>
-          <div className="divide-y divide-z-border">
-            {zingInsights.map((insight) => (
-              <div key={insight.id} className="px-5 py-4 flex items-center justify-between hover:bg-z-surface-hi/50 transition-colors cursor-pointer group">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`w-1.5 h-1.5 rounded-full ${insight.type === 'warning' ? 'bg-z-orange' : insight.type === 'info' ? 'bg-z-green' : 'bg-z-purple'}`}></span>
-                    <span className="text-sm font-semibold text-z-text">{insight.title}</span>
-                  </div>
-                  <p className="text-xs text-z-text-dim truncate">{insight.message}</p>
+  // Drawer Content Renderer
+  const renderDrawerContent = () => {
+    if (activeDrawer === 'team') {
+      return (
+        <>
+          <button onClick={() => { setEditingEmployee({ is_active: true, max_hours_per_week: 40 }); setShowEditModal(true); }} className="w-full py-2.5 mb-4 rounded-xl border border-dashed border-z-border text-z-text-dim text-sm font-semibold hover:border-z-purple hover:text-z-purple transition-colors flex items-center justify-center gap-2">
+            <PlusIcon className="w-4 h-4" /> Add team member
+          </button>
+          <div className="space-y-3">
+            {employees.length === 0 ? <p className="text-z-text-faint text-center py-12 text-sm font-mono">No team members found.</p> : employees.map(emp => (
+              <div key={emp.id} className="bg-z-surface border border-z-border rounded-xl p-3 flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full ${emp.is_active ? 'bg-z-purple' : 'bg-z-text-faint'} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+                  {emp.name.split(' ').map(n => n[0]).join('')}
                 </div>
-                {insight.action && (
-                  <button onClick={() => { setChatContext(insight.context); setChatActionId(insight.requestId); setChatActionType(insight.actionType); setIsChatOpen(true); }} className="ml-4 text-xs font-mono font-semibold text-z-blue group-hover:text-z-purple transition-colors whitespace-nowrap">
-                    {insight.action} →
-                  </button>
-                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-z-text">{emp.name}</div>
+                  <div className="text-xs text-z-text-dim mt-0.5 flex items-center gap-2">
+                    {emp.job_title} · {emp.max_hours_per_week}h/wk
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-semibold ${emp.is_active ? 'bg-z-green/10 text-z-green' : 'bg-z-red/10 text-z-red'}`}>
+                      {emp.is_active ? 'ACTIVE' : 'INACTIVE'}
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => { setEditingEmployee(emp); setShowEditModal(true); }} className="text-xs font-semibold text-z-blue bg-z-blue/10 px-2.5 py-1 rounded-lg hover:bg-z-blue/20 transition-colors">Edit</button>
               </div>
             ))}
           </div>
-        </div>
-
-        {message && (
-          <div className={`p-4 rounded-xl text-sm font-medium ${message.includes('Success') || message.includes('AI optimized') ? 'bg-z-green/10 text-z-green border border-z-green/20' : 'bg-z-orange/10 text-z-orange border border-z-orange/20'}`}>
-            {message}
-          </div>
-        )}
-
-        {/* Roster Tab */}
-        {activeTab === 'roster' && (
-          <div className="space-y-6">
-            <div className="bg-z-surface rounded-2xl border border-z-border p-6 shadow-sm">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                <div>
-                  <h2 className="text-lg font-display font-bold text-z-text">Generate Schedule</h2>
-                  <p className="text-sm text-z-text-dim mt-1 font-mono">AI will optimize shifts based on availability.</p>
+        </>
+      );
+    }
+    if (activeDrawer === 'exceptions') {
+      return (
+        <>
+          <button onClick={() => setShowExceptionModal(true)} className="w-full py-2.5 mb-4 rounded-xl border border-dashed border-z-border text-z-text-dim text-sm font-semibold hover:border-z-purple hover:text-z-purple transition-colors flex items-center justify-center gap-2">
+            <PlusIcon className="w-4 h-4" /> Add exception
+          </button>
+          <div className="space-y-3">
+            {exceptions.length === 0 ? <p className="text-z-text-faint text-center py-12 text-sm font-mono">No exceptions found.</p> : exceptions.map(ex => (
+              <div key={ex.id} className="bg-z-surface border border-z-border rounded-xl p-3 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-semibold text-z-purple bg-z-purple/10 px-1.5 py-0.5 rounded-full">{ex.exception_type}</span>
+                  <span className="text-sm font-semibold text-z-text">{ex.user_name}</span>
                 </div>
-                <div className="flex items-center gap-2 bg-z-page/50 border border-z-border rounded-xl p-1">
-                  {['day', 'week', 'month', 'quarter'].map((duration) => (
-                    <button key={duration} onClick={() => setGenerationDuration(duration)} className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${generationDuration === duration ? 'bg-z-purple text-white shadow-sm' : 'text-z-text-dim hover:text-z-text'}`}>
-                      {duration.charAt(0).toUpperCase() + duration.slice(1)}
-                    </button>
+                <div className="text-xs text-z-text-dim font-mono">{ex.start_date} → {ex.end_date || '—'}</div>
+                <button onClick={async () => { if (confirm('Deactivate?')) { await fetch(`${API_BASE_URL}/api/admin/exceptions/${ex.id}`, { method: 'DELETE' }); fetchExceptions(); fetchEmployees(); } }} className="text-xs text-z-red bg-z-red/10 px-2.5 py-1 rounded-lg hover:bg-z-red/20 transition-colors self-end">Deactivate</button>
+              </div>
+            ))}
+          </div>
+        </>
+      );
+    }
+    if (activeDrawer === 'swaps') {
+      return (
+        <div className="space-y-3">
+          {swapRequests.length === 0 ? <p className="text-z-text-faint text-center py-12 text-sm font-mono">No swap requests.</p> : swapRequests.map(req => (
+            <div key={req.id} className="bg-z-surface border border-z-border rounded-xl p-3 flex flex-col gap-2">
+              <div className="text-sm font-semibold text-z-text flex items-center gap-2">
+                {req.requesting_user} ↔ {req.target_user}
+                {req.ai_verified && <span className="text-[10px] font-mono font-semibold text-z-purple bg-z-purple/10 px-1.5 py-0.5 rounded-full">AI-VERIFIED</span>}
+              </div>
+              <div className="text-xs text-z-text-dim">{req.assignment_date} · <span className={`font-mono font-semibold ${getStatusBadge(req.status)}`}>{req.status}</span></div>
+              {req.status === 'PENDING' && (
+                <div className="flex gap-2 mt-1">
+                  <button onClick={() => handleSwapRequest(req.id, 'APPROVED')} className="flex-1 py-1.5 rounded-lg bg-z-green text-white text-xs font-bold hover:opacity-90 transition-opacity">Approve</button>
+                  <button onClick={() => handleSwapRequest(req.id, 'REJECTED')} className="flex-1 py-1.5 rounded-lg bg-z-surface-hi border border-z-border text-z-text-dim text-xs font-bold hover:text-z-text transition-colors">Reject</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (activeDrawer === 'timeoff') {
+      return (
+        <div className="space-y-3">
+          {timeOffRequests.length === 0 ? <p className="text-z-text-faint text-center py-12 text-sm font-mono">No time off requests.</p> : timeOffRequests.map(req => (
+            <div key={req.id} className="bg-z-surface border border-z-border rounded-xl p-3 flex flex-col gap-2">
+              <div className="text-sm font-semibold text-z-text">{req.user_name}</div>
+              <div className="text-xs text-z-text-dim">{req.start_date} → {req.end_date} · {req.reason}</div>
+              <div className="text-xs text-z-text-dim"><span className={`font-mono font-semibold ${getStatusBadge(req.status)}`}>{req.status}</span></div>
+              {req.status === 'PENDING' && (
+                <div className="flex gap-2 mt-1">
+                  <button onClick={() => handleTimeOffRequest(req.id, 'APPROVED')} className="flex-1 py-1.5 rounded-lg bg-z-green text-white text-xs font-bold hover:opacity-90 transition-opacity">Approve</button>
+                  <button onClick={() => handleTimeOffRequest(req.id, 'REJECTED')} className="flex-1 py-1.5 rounded-lg bg-z-surface-hi border border-z-border text-z-text-dim text-xs font-bold hover:text-z-text transition-colors">Reject</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return <div className="text-center text-z-text-faint text-sm mt-10 font-mono">Select a category from the left rail.</div>;
+  };
+
+  // Main Content Renderer
+  const renderMainContent = () => {
+    if (activeDrawer === 'schedule') {
+      return (
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-5xl mx-auto space-y-6">
+            
+            {/* PREMIUM AI GENERATION BOARD */}
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-z-purple to-z-blue rounded-3xl opacity-20 group-hover:opacity-40 transition duration-500 blur"></div>
+              <div className="relative bg-z-surface rounded-3xl border border-z-border p-8 shadow-2xl">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-z-purple/20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-z-purple/30">
+                      <SparklesIcon className="w-6 h-6 text-z-purple" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-display font-bold text-z-text tracking-tight">AI Schedule Generation</h2>
+                      <p className="text-sm text-z-text-dim mt-1 font-body max-w-md">
+                        Zing will analyze employee availability, branch requirements, and labor constraints to build the perfect optimized roster.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 bg-z-page border border-z-border rounded-2xl p-1.5 shadow-inner">
+                    {['day', 'week', 'month', 'quarter'].map((duration) => (
+                      <button 
+                        key={duration} 
+                        onClick={() => setGenerationDuration(duration)} 
+                        className={`px-5 py-2.5 rounded-xl text-xs font-bold font-body transition-all duration-200 ${
+                          generationDuration === duration 
+                            ? 'bg-z-purple text-white shadow-lg shadow-z-purple/30' 
+                            : 'text-z-text-dim hover:text-z-text hover:bg-z-surface-hi'
+                        }`}
+                      >
+                        {duration.charAt(0).toUpperCase() + duration.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button 
+                  onClick={generateRoster} 
+                  disabled={loading} 
+                  className="w-full md:w-auto bg-gradient-to-r from-z-purple to-z-blue text-white px-8 py-4 rounded-2xl hover:opacity-90 active:scale-[0.98] transition-all font-bold font-body text-sm flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-z-purple/30 border border-z-purple/20"
+                >
+                  {loading ? (
+                    <>
+                      <ArrowPathIcon className="w-5 h-5 animate-spin" />
+                      Optimizing Roster...
+                    </>
+                  ) : (
+                    <>
+                      <SparklesIcon className="w-5 h-5" />
+                      Generate {generationDuration.charAt(0).toUpperCase() + generationDuration.slice(1)} Schedule
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* SCHEDULE QUERY COMPONENT */}
+            <ScheduleQuery roster={roster} employees={employees} branches={branches} />
+          </div>
+        </div>
+      );
+    }
+
+    // Default: Home/Chat view
+    return (
+      <>
+        {/* Chat Scroll Area */}
+        <div className="flex-1 overflow-y-auto flex justify-center p-6 scroll-smooth">
+          <div className="w-full max-w-2xl flex flex-col gap-4">
+            {/* Initial AI Briefing */}
+            {chatMessages.length === 0 && (
+              <div className="flex gap-3">
+                <div className="w-7 h-7 rounded-lg bg-z-purple flex-shrink-0 flex items-center justify-center">
+                  <SparklesIcon className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="max-w-[80%]">
+                  <div className="text-sm leading-relaxed text-z-text font-body">
+                    Morning, {user?.name || 'Manager'}. <span className="text-z-orange font-semibold">{zingInsights.filter(i => i.action).length} item{zingInsights.filter(i => i.action).length !== 1 ? 's' : ''}</span> need your call before the schedule locks in.
+                  </div>
+                  {zingInsights.filter(i => i.action).map(insight => (
+                    <div key={insight.id} className="bg-z-surface border border-z-border rounded-xl p-3 mt-3 flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${insight.actionType === 'timeoff' ? 'bg-z-orange' : 'bg-z-purple'}`}></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-z-text">{insight.title}</div>
+                        <div className="text-xs text-z-text-dim truncate">{insight.message}</div>
+                      </div>
+                      <button onClick={() => { setChatContext(insight.context); setChatActionId(insight.requestId); setChatActionType(insight.actionType); setIsChatOpen(true); }} className="text-xs font-mono font-semibold text-z-blue hover:text-z-purple transition-colors whitespace-nowrap">
+                        Review →
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
-              <button onClick={generateRoster} disabled={loading} className="w-full md:w-auto bg-z-blue text-white px-6 py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
-                <SparklesIcon className="w-4 h-4" />
-                {loading ? 'Optimizing...' : `Generate ${generationDuration.charAt(0).toUpperCase() + generationDuration.slice(1)} Schedule`}
+            )}
+
+            {/* Chat Messages */}
+            {chatMessages.map((msg, idx) => (
+              <div key={idx} className={`flex gap-3 ${msg.type === 'user' ? 'flex-row-reverse' : ''}`}>
+                <div className={`w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center ${msg.type === 'user' ? 'bg-z-surface-hi border border-z-border' : 'bg-z-purple'}`}>
+                  {msg.type === 'user' ? (
+                    <UsersIcon className="w-3.5 h-3.5 text-z-text-dim" />
+                  ) : (
+                    <SparklesIcon className="w-3.5 h-3.5 text-white" />
+                  )}
+                </div>
+                <div className={`max-w-[80%] ${msg.type === 'user' ? 'bg-z-surface-hi rounded-2xl rounded-tr-sm p-3' : ''}`}>
+                  <div className="text-sm text-z-text font-body">{msg.text}</div>
+                </div>
+              </div>
+            ))}
+            
+            {isThinking && (
+              <div className="flex gap-3">
+                <div className="w-7 h-7 rounded-lg bg-z-purple flex-shrink-0 flex items-center justify-center">
+                  <SparklesIcon className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="flex items-center gap-1.5 text-z-text-faint font-mono text-xs">
+                  <span className="w-1.5 h-1.5 bg-z-purple rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-1.5 h-1.5 bg-z-purple rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-1.5 h-1.5 bg-z-purple rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  <span>Zing is working on it...</span>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+        </div>
+
+        {/* Composer */}
+        <div className="flex-shrink-0 p-4 bg-gradient-to-t from-z-page via-z-page to-transparent">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+              {['Generate schedule', 'Show team', 'Show swaps', 'Labor cost'].map((chip) => (
+                <button
+                  key={chip}
+                  onClick={() => handleChatMessage(chip)}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-full bg-z-surface border border-z-border text-xs font-medium text-z-text-dim hover:border-z-purple/50 hover:text-z-text transition-colors"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 bg-z-surface border border-z-border rounded-full px-4 py-2.5 focus-within:border-z-purple/50 focus-within:ring-1 focus-within:ring-z-purple/20 transition-all">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleChatMessage(chatInput)}
+                placeholder="Ask Zing or type a request..."
+                className="flex-1 bg-transparent border-none outline-none text-sm text-z-text placeholder-z-text-faint font-body"
+              />
+              <button 
+                onClick={() => handleChatMessage(chatInput)}
+                className="w-8 h-8 rounded-full bg-z-purple flex items-center justify-center text-white hover:bg-z-purple/90 transition-colors flex-shrink-0"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
               </button>
             </div>
-            <ScheduleQuery roster={roster} employees={employees} branches={branches} />
           </div>
-        )}
+        </div>
+      </>
+    );
+  };
 
-        {/* Employees Tab */}
-        {activeTab === 'employees' && (
-          <div className="bg-z-surface rounded-2xl border border-z-border p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <div><h2 className="text-lg font-display font-bold text-z-text">Team Members</h2><p className="text-sm text-z-text-dim font-mono">Manage your workforce</p></div>
-              <button className="flex items-center gap-2 bg-z-blue text-white px-4 py-2 rounded-lg hover:opacity-90 active:scale-95 transition-all text-sm font-semibold"><UserPlusIcon className="h-4 w-4" /> Add Staff</button>
-            </div>
-            {employees.length === 0 ? <p className="text-z-text-dim text-center py-12 text-sm font-mono">No team members found.</p> : (
-              <div className="space-y-3">
-                {employees.map((emp) => (
-                  <div key={emp.id} className="bg-z-page/50 rounded-xl p-4 flex justify-between items-center border border-z-border/50 hover:border-z-border transition-colors">
-                    <div>
-                      <div className="flex items-center gap-2"><span className="font-semibold text-z-text text-sm">{emp.name}</span><span className="text-xs text-z-text-faint font-mono">{emp.employee_id}</span></div>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-z-text-dim font-mono">{emp.job_title} · {emp.max_hours_per_week}h/week</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${emp.is_active ? 'bg-z-green/10 text-z-green' : 'bg-z-red/10 text-z-red'}`}>{emp.is_active ? 'Active' : 'Inactive'}</span>
-                      </div>
-                    </div>
-                    <button onClick={() => { setEditingEmployee(emp); setShowEditModal(true); }} className="text-xs text-z-blue font-semibold hover:opacity-70 transition-opacity px-3 py-1.5 bg-z-blue/10 rounded-lg">Edit</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+  return (
+    <div className="flex h-screen bg-z-page text-z-text font-body overflow-hidden">
+      {/* ONBOARDING WIZARD OVERLAY */}
+      {showOnboarding && <OrganizationOnboarding onComplete={() => { setShowOnboarding(false); fetchEmployees(); fetchBranches(); }} />}
 
-        {/* Exceptions Tab */}
-        {activeTab === 'exceptions' && (
-          <div className="bg-z-surface rounded-2xl border border-z-border p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <div><h2 className="text-lg font-display font-bold text-z-text">Exceptions</h2><p className="text-sm text-z-text-dim font-mono">Manage special circumstances</p></div>
-              <button onClick={() => setShowExceptionModal(true)} className="flex items-center gap-2 bg-z-blue text-white px-4 py-2 rounded-lg hover:opacity-90 active:scale-95 transition-all text-sm font-semibold"><PlusIcon className="h-4 w-4" /> Add</button>
-            </div>
-            {exceptions.length === 0 ? <p className="text-z-text-dim text-center py-12 text-sm font-mono">No exceptions found.</p> : (
-              <div className="space-y-3">
-                {exceptions.map((ex) => (
-                  <div key={ex.id} className="bg-z-page/50 rounded-xl p-4 flex justify-between items-start border border-z-border/50">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-z-purple/10 text-z-purple">{ex.exception_type}</span>
-                        <span className="font-semibold text-z-text text-sm">{ex.user_name}</span>
-                      </div>
-                      <div className="text-xs text-z-text-dim font-mono">Start: {ex.start_date} {ex.end_date && `· End: ${ex.end_date}`}</div>
-                    </div>
-                    <button onClick={async () => { if (confirm('Deactivate?')) { await fetch(`${API_BASE_URL}/api/admin/exceptions/${ex.id}`, { method: 'DELETE' }); fetchExceptions(); fetchEmployees(); } }} className="text-z-red hover:opacity-70 transition-opacity p-1 bg-z-red/10 rounded-lg"><XMarkIcon className="h-4 w-4" /></button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+      {/* LEFT ICON RAIL */}
+      <div className="w-16 flex-shrink-0 bg-z-bg border-r border-z-border flex flex-col items-center py-4 gap-2 z-20">
+        <div className="w-8 h-8 bg-z-purple rounded-lg flex items-center justify-center mb-4 shadow-[0_0_16px_rgba(191,90,242,0.45)]">
+          <SparklesIcon className="w-4 h-4 text-white" />
+        </div>
 
-        {/* Swaps Tab */}
-        {activeTab === 'swaps' && (
-          <div className="bg-z-surface rounded-2xl border border-z-border p-6 shadow-sm">
-            <h2 className="text-lg font-display font-bold text-z-text mb-1">Swap Requests</h2>
-            <p className="text-sm text-z-text-dim font-mono mb-6">Review and approve shift swaps</p>
-            {swapRequests.length === 0 ? <p className="text-z-text-dim text-center py-12 text-sm font-mono">No swap requests.</p> : (
-              <div className="space-y-3">
-                {swapRequests.map((req) => (
-                  <div key={req.id} className="bg-z-page/50 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border border-z-border/50">
-                    <div>
-                      <div className="flex items-center gap-2"><span className="font-semibold text-z-text text-sm">{req.requesting_user}</span><ArrowsRightLeftIcon className="w-3 h-3 text-z-text-faint" /><span className="font-semibold text-z-text text-sm">{req.target_user}</span></div>
-                      <div className="text-xs text-z-text-dim font-mono mt-1">Shift: {req.assignment_date}</div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${getStatusBadge(req.status)}`}>{req.status}</span>
-                      {req.ai_verified && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-z-purple/10 text-z-purple border border-z-purple/20 flex items-center gap-1 ml-2">🛡️ AI-Verified</span>
-                      )}
-                      {req.status === 'PENDING' && (
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => handleSwapRequest(req.id, 'APPROVED')} className="bg-z-green text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 active:scale-95 transition-all">Approve</button>
-                          <button onClick={() => handleSwapRequest(req.id, 'REJECTED')} className="bg-z-red text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 active:scale-95 transition-all">Reject</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {[
+          { id: 'home', icon: HomeIcon, label: 'Home' },
+          { id: 'schedule', icon: CalendarIcon, label: 'Schedule' },
+          { id: 'team', icon: UsersIcon, label: 'Team' },
+          { id: 'exceptions', icon: ExclamationTriangleIcon, label: 'Exceptions', badge: exceptions.length },
+          { id: 'swaps', icon: ArrowsRightLeftIcon, label: 'Swaps', badge: swapRequests.filter(r => r.status === 'PENDING').length },
+          { id: 'timeoff', icon: CalendarDaysIcon, label: 'Time Off', badge: timeOffRequests.filter(r => r.status === 'PENDING').length },
+        ].map(item => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleNavigation(item.id)}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all duration-200 ${
+                activeDrawer === item.id 
+                  ? 'bg-z-surface-hi text-z-purple' 
+                  : 'text-z-text-dim hover:bg-z-surface hover:text-z-text'
+              }`}
+              title={item.label}
+            >
+              <Icon className="w-5 h-5" />
+              {item.badge > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-z-red text-white text-[9px] font-mono font-bold rounded-full flex items-center justify-center">
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
 
-        {/* Time Off Tab */}
-        {activeTab === 'timeoff' && (
-          <div className="bg-z-surface rounded-2xl border border-z-border p-6 shadow-sm">
-            <h2 className="text-lg font-display font-bold text-z-text mb-1">Time Off Requests</h2>
-            <p className="text-sm text-z-text-dim font-mono mb-6">Manage leave and time off</p>
-            {timeOffRequests.length === 0 ? <p className="text-z-text-dim text-center py-12 text-sm font-mono">No time off requests.</p> : (
-              <div className="space-y-3">
-                {timeOffRequests.map((req) => (
-                  <div key={req.id} className="bg-z-page/50 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border border-z-border/50">
-                    <div>
-                      <div className="flex items-center gap-2"><span className="font-semibold text-z-text text-sm">{req.user_name}</span><span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-z-blue/10 text-z-blue">{req.reason}</span></div>
-                      <div className="text-xs text-z-text-dim font-mono mt-1">{req.start_date} → {req.end_date}</div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${getStatusBadge(req.status)}`}>{req.status}</span>
-                      {req.status === 'PENDING' && (
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => handleTimeOffRequest(req.id, 'APPROVED')} className="bg-z-green text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 active:scale-95 transition-all">Approve</button>
-                          <button onClick={() => handleTimeOffRequest(req.id, 'REJECTED')} className="bg-z-red text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 active:scale-95 transition-all">Reject</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <div className="flex-1" />
+        <button onClick={() => setShowOnboarding(true)} className="w-10 h-10 rounded-xl flex items-center justify-center text-z-text-dim hover:bg-z-surface hover:text-z-text transition-colors" title="Setup Organization">
+          <Cog6ToothIcon className="w-5 h-5" />
+        </button>
+        <button onClick={onLogout} className="w-10 h-10 rounded-xl flex items-center justify-center text-z-text-dim hover:bg-z-surface hover:text-z-red transition-colors" title="Sign Out">
+          <ArrowRightOnRectangleIcon className="w-5 h-5" />
+        </button>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-z-bg/90 backdrop-blur-xl border-t border-z-border z-20">
-        <div className="flex justify-around items-center max-w-7xl mx-auto">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center py-3 px-2 rounded-xl transition-all relative min-w-[60px] ${isActive ? 'text-z-purple' : 'text-z-text-dim'}`}>
-                <div className="relative">
-                  <Icon className={`h-6 w-6 ${isActive ? 'text-z-purple' : 'text-z-text-dim'}`} />
-                  {tab.badge > 0 && <span className="absolute -top-1.5 -right-2 bg-z-red text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{tab.badge}</span>}
-                </div>
-                <span className={`text-[10px] font-semibold mt-1 font-mono ${isActive ? 'text-z-purple' : 'text-z-text-dim'}`}>{tab.label}</span>
-              </button>
-            );
-          })}
+      {/* CENTER MAIN AREA */}
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Topbar */}
+        <div className="h-16 border-b border-z-border flex items-center justify-between px-6 flex-shrink-0 bg-z-bg/80 backdrop-blur-sm z-10">
+          <div>
+            <h1 className="font-display font-bold text-sm tracking-tight text-z-text">Zing Command Center</h1>
+            <p className="text-[10px] text-z-text-faint uppercase tracking-widest font-mono">AI-Native Workforce Management</p>
+          </div>
+          {message && (
+            <div className={`px-4 py-2 rounded-lg text-xs font-medium ${message.includes('Success') || message.includes('AI optimized') ? 'bg-z-green/10 text-z-green border border-z-green/20' : 'bg-z-orange/10 text-z-orange border border-z-orange/20'}`}>
+              {message}
+            </div>
+          )}
         </div>
-      </nav>
 
-      {/* Floating AI Button */}
-      <button onClick={() => { setChatContext(''); setChatActionId(null); setChatActionType(null); setIsChatOpen(true); }} className="fixed bottom-24 right-6 z-20 bg-z-purple text-white p-4 rounded-full hover:scale-105 active:scale-95 transition-all flex items-center justify-center shadow-[0_8px_24px_rgba(191,90,242,0.4)]">
-        <SparklesIcon className="w-6 h-6" />
-      </button>
+        {/* Main Content */}
+        {renderMainContent()}
+      </div>
 
-      {/* Modals */}
+      {/* RIGHT SLIDE-OUT DRAWER */}
+      {isDrawerOpen && (
+        <div 
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 transition-opacity duration-300"
+          onClick={() => { setIsDrawerOpen(false); setActiveDrawer('home'); }}
+        />
+      )}
+      
+      <div className={`absolute right-0 top-0 bottom-0 w-96 bg-z-bg border-l border-z-border z-40 transform transition-transform duration-300 ease-out flex flex-col ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-5 border-b border-z-border flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="font-display font-bold text-base text-z-text capitalize">{activeDrawer === 'timeoff' ? 'Time Off' : activeDrawer}</h2>
+            <p className="text-[10px] text-z-text-faint uppercase tracking-wider font-mono mt-1">Context Panel</p>
+          </div>
+          <button 
+            onClick={() => { setIsDrawerOpen(false); setActiveDrawer('home'); }}
+            className="w-7 h-7 rounded-full bg-z-surface border border-z-border flex items-center justify-center text-z-text-dim hover:text-z-text hover:border-z-text-dim transition-colors"
+          >
+            <XMarkIcon className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {renderDrawerContent()}
+        </div>
+      </div>
+
+      {/* MODALS */}
       {showExceptionModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-z-bg rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl border border-z-border">
@@ -436,7 +601,7 @@ const AdminDashboard = ({ user, onLogout }) => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-z-bg rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl border border-z-border">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-display font-bold text-z-text">Edit Team Member</h3>
+              <h3 className="text-lg font-display font-bold text-z-text">{editingEmployee.id ? 'Edit' : 'Add'} Team Member</h3>
               <button onClick={() => { setShowEditModal(false); setEditingEmployee(null); }} className="text-z-text-dim hover:text-z-text transition-colors bg-z-surface p-1 rounded-full"><XMarkIcon className="h-5 w-5" /></button>
             </div>
             <div className="space-y-4">
@@ -446,7 +611,7 @@ const AdminDashboard = ({ user, onLogout }) => {
               <div><label className="block text-sm font-semibold text-z-text mb-1.5 font-mono">Phone Number</label><input type="text" value={editingEmployee.phone_number || ''} onChange={(e) => setEditingEmployee({...editingEmployee, phone_number: e.target.value})} className="w-full px-4 py-2.5 bg-z-surface border border-z-border rounded-xl text-sm text-z-text focus:outline-none focus:ring-2 focus:ring-z-purple/30 focus:border-z-purple transition-all" /></div>
               <div><label className="block text-sm font-semibold text-z-text mb-1.5 font-mono">Max Hours/Week</label><input type="number" value={editingEmployee.max_hours_per_week || 45} onChange={(e) => setEditingEmployee({...editingEmployee, max_hours_per_week: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 bg-z-surface border border-z-border rounded-xl text-sm text-z-text focus:outline-none focus:ring-2 focus:ring-z-purple/30 focus:border-z-purple transition-all" /></div>
               <div className="flex items-center gap-3 py-1"><label className="text-sm font-semibold text-z-text font-mono">Active Status</label><input type="checkbox" checked={editingEmployee.is_active !== false} onChange={(e) => setEditingEmployee({...editingEmployee, is_active: e.target.checked})} className="w-5 h-5 text-z-purple rounded focus:ring-z-purple/30 bg-z-surface border-z-border" /></div>
-              <button onClick={updateEmployee} className="w-full bg-z-blue text-white py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all font-semibold text-sm">Save Changes</button>
+              <button onClick={updateEmployee} className="w-full bg-z-blue text-white py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all font-semibold text-sm">{editingEmployee.id ? 'Save Changes' : 'Add Employee'}</button>
             </div>
           </div>
         </div>
