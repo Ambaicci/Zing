@@ -81,7 +81,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     return insights;
   }, [timeOffRequests, swapRequests]);
 
-  // Schedule Generation
+    // Schedule Generation
   const generateRoster = async () => {
     setLoading(true); setMessage('');
     try {
@@ -106,14 +106,26 @@ const AdminDashboard = ({ user, onLogout }) => {
         body: JSON.stringify({ organization_id: "0c8cf570-ccce-416c-b8ec-0723aab90225", start_date: formatDate(startDate), end_date: formatDate(endDate), rotation_type: "none" })
       });
       const data = await response.json();
-      if (data.status === 'success') {
-        setMessage(`🧠 AI optimized the schedule! ${data.assignments_created} shifts assigned.`);
-        setChatMessages(prev => [...prev, { type: 'ai', text: `✅ Schedule generated! ${data.assignments_created} shifts assigned.` }]);
+      
+      // DEBUG: Log the exact backend response to the browser console
+      console.log("Backend schedule generation response:", data); 
+      
+      // Handle both 'status: success' and 'success: true' formats
+      if (data.status === 'success' || data.success === true) {
+        const count = data.assignments_created || data.count || "multiple";
+        setMessage(`🧠 AI optimized the schedule! ${count} shifts assigned.`);
+        setChatMessages(prev => [...prev, { type: 'ai', text: `✅ Schedule generated! ${count} shifts assigned.` }]);
       } else {
-        setMessage(`AI Response: ${data.message}`);
+        // Fallback to show the actual response if it's not a success format
+        setMessage(`AI Response: ${data.message || JSON.stringify(data)}`);
       }
       fetchRoster(); fetchEmployees();
-    } catch (err) { setMessage('Error generating schedule.'); } finally { setLoading(false); }
+    } catch (err) { 
+      console.error("Schedule generation error:", err);
+      setMessage('Error generating schedule.'); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   // Exception Creation
