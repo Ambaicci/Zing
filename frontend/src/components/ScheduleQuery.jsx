@@ -89,7 +89,8 @@ const CompliancePill = ({ message, type }) => {
 
 // ============ MAIN SCHEDULE QUERY COMPONENT ============
 const ScheduleQuery = ({ roster, employees, branches }) => {
-  const [dateRange, setDateRange] = useState('thisWeek');
+  // FIX: Default to 'nextWeek' to match the AI generator's default behavior
+  const [dateRange, setDateRange] = useState('nextWeek');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState('all');
@@ -292,7 +293,7 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
         const f = data.filters;
         setSelectedEmployee(f.employee || 'all'); setSelectedBranch(f.branch || 'all');
         setSelectedDays(f.days || []); setSelectedTimeOfDay(f.timeOfDay || 'all');
-        setDateRange(f.dateRange || 'thisWeek'); setCustomStartDate(''); setCustomEndDate('');
+        setDateRange(f.dateRange || 'nextWeek'); setCustomStartDate(''); setCustomEndDate('');
         setNaturalQuery('');
       } else {
         setParseError(data.error || 'Could not parse query.');
@@ -303,14 +304,15 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
   const toggleDay = (day) => setSelectedDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
 
   const clearAllFilters = () => {
-    setDateRange('thisWeek'); setCustomStartDate(''); setCustomEndDate('');
+    // FIX: Reset to 'nextWeek' to match default
+    setDateRange('nextWeek'); setCustomStartDate(''); setCustomEndDate('');
     setSelectedEmployee('all'); setSelectedBranch('all'); setSelectedDays([]);
     setSelectedTimeOfDay('all'); setParseError('');
   };
 
   const getActiveFiltersCount = () => {
     let count = 0;
-    if (dateRange !== 'thisWeek') count++;
+    if (dateRange !== 'nextWeek') count++;
     if (selectedEmployee !== 'all') count++;
     if (selectedBranch !== 'all') count++;
     if (selectedDays.length > 0) count++;
@@ -326,7 +328,7 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
 
       <div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
         
-        {/* 1. GLOWING AI COMMAND BAR (Kept exactly as requested) */}
+        {/* 1. GLOWING AI COMMAND BAR */}
         <div className="relative group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-z-purple to-z-blue rounded-2xl opacity-20 group-focus-within:opacity-100 transition duration-500 blur"></div>
           <div className="relative bg-z-surface rounded-2xl border border-z-border p-1 shadow-xl">
@@ -356,7 +358,7 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
           </div>
         </div>
 
-        {/* 2. UNIFIED CONTROLS: Filter Toggle, View Toggles & Active Chips */}
+        {/* 2. UNIFIED CONTROLS */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -426,7 +428,7 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
           )}
         </div>
 
-        {/* 3. COMPACT FILTER PANEL (Collapsible) */}
+        {/* 3. COMPACT FILTER PANEL */}
         {showFilters && (
           <div className="bg-z-surface rounded-2xl border border-z-border p-4 md:p-5 shadow-sm animate-[slideDown_0.2s_ease-out]">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
