@@ -46,7 +46,19 @@ const AdminDashboard = ({ user, onLogout }) => {
   // API Fetch Functions
   const fetchEmployees = async () => { try { const res = await fetch(`${API_BASE_URL}/api/admin/employees`); setEmployees(await res.json()); } catch (err) { console.error(err); } };
   const fetchBranches = async () => { try { const res = await fetch(`${API_BASE_URL}/api/branches`); setBranches(await res.json()); } catch (err) { console.error(err); } };
-  const fetchRoster = async () => { try { const res = await fetch(`${API_BASE_URL}/api/master-roster`); setRoster(await res.json()); } catch (err) { console.error(err); } };
+  
+  // UPDATED: Added console.log to debug roster data
+  const fetchRoster = async () => { 
+    try { 
+      const res = await fetch(`${API_BASE_URL}/api/master-roster`); 
+      const data = await res.json();
+      console.log("Fetched roster data:", data); 
+      setRoster(data); 
+    } catch (err) { 
+      console.error("Error fetching roster:", err); 
+    } 
+  };
+  
   const fetchExceptions = async () => { try { const res = await fetch(`${API_BASE_URL}/api/admin/exceptions`); setExceptions(await res.json()); } catch (err) { console.error(err); } };
   const fetchSwapRequests = async () => { try { const res = await fetch(`${API_BASE_URL}/api/swap-requests`); setSwapRequests(await res.json()); } catch (err) { console.error(err); } };
   const fetchTimeOffRequests = async () => { try { const res = await fetch(`${API_BASE_URL}/api/time-off-requests`); setTimeOffRequests(await res.json()); } catch (err) { console.error(err); } };
@@ -81,7 +93,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     return insights;
   }, [timeOffRequests, swapRequests]);
 
-    // Schedule Generation
+  // Schedule Generation
   const generateRoster = async () => {
     setLoading(true); setMessage('');
     try {
