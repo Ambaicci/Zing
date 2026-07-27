@@ -11,7 +11,7 @@ load_dotenv(dotenv_path=env_path, override=True)
 
 # 2. Get the variables
 url: str = os.environ.get("SUPABASE_URL", "")
-key: str = os.environ.get("SUPABASE_KEY", "")
+key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
 # 3. Debug check: If it still fails, this will tell us exactly why
 if not url or not key:
