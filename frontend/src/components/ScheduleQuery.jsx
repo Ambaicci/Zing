@@ -154,23 +154,7 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
     return true;
   };
 
-  const filteredResults = useMemo(() => {
-    const { start, end } = getDateRange();
-    return roster.filter(shift => {
-      if (start && end) {
-        const shiftDate = new Date(shift.date);
-        if (shiftDate < start || shiftDate > end) return false;
-      }
-      if (selectedEmployee !== 'all') {
-        const emp = employees.find(e => e.id === shift.user_id);
-        if (!emp || emp.name !== selectedEmployee) return false;
-      }
-      if (selectedBranch !== 'all' && shift.branch_name !== selectedBranch) return false;
-      if (selectedDays.length > 0 && !selectedDays.includes(shift.day)) return false;
-      if (!matchesTimeOfDay(shift.start_time)) return false;
-      return true;
-    });
-  }, [roster, dateRange, customStartDate, customEndDate, selectedEmployee, selectedBranch, selectedDays, selectedTimeOfDay, employees]);
+  filteredResults
 
   const handleDragStart = (event) => { setActiveId(event.active.id); setActiveShift(event.active.data.current.shift); };
   const handleDragOver = (event) => setOverId(event.over?.id || null);
