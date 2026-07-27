@@ -36,7 +36,8 @@ def with_db_retry(max_retries=3, delay=1):
                     return func(*args, **kwargs)
                 except Exception as e:
                     error_str = str(e)
-                    if "ConnectionTerminated" in error_str or "RemoteProtocolError" in error_str or "ReadTimeout" in error_str:
+                    # Expanded to catch ReadError and Resource temporarily unavailable
+                    if "ConnectionTerminated" in error_str or "RemoteProtocolError" in error_str or "ReadTimeout" in error_str or "ReadError" in error_str or "Resource temporarily unavailable" in error_str:
                         if attempt == max_retries - 1:
                             print(f"❌ DB Query '{func.__name__}' failed after {max_retries} retries: {e}")
                             raise e
@@ -47,7 +48,6 @@ def with_db_retry(max_retries=3, delay=1):
                         raise e
         return wrapper
     return decorator
-
 # ==========================================================
 # USER / EMPLOYEE FUNCTIONS
 # ==========================================================
