@@ -9,3 +9,4 @@ email-validator
 apscheduler
 supabase
 python-dateutil
+requests
