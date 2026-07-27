@@ -25,6 +25,7 @@ app = FastAPI(title="Zing Smart Scheduling API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://zing-taupe.vercel.app",  # <-- NEW VERCEL URL ADDED HERE
         "https://scheduler-five-opal.vercel.app",
         "https://scheduler-frontend.vercel.app",
         "https://chebu-scheduler.vercel.app",
