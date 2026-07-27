@@ -89,8 +89,8 @@ const CompliancePill = ({ message, type }) => {
 
 // ============ MAIN SCHEDULE QUERY COMPONENT ============
 const ScheduleQuery = ({ roster, employees, branches }) => {
-  // FIX: Default to 'nextWeek' to match the AI generator's default behavior
-  const [dateRange, setDateRange] = useState('nextWeek');
+  // FIX: Default to 'all' so we see all generated shifts immediately
+  const [dateRange, setDateRange] = useState('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState('all');
@@ -112,7 +112,6 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
   
-  // Compliance pill state
   const [complianceStatus, setComplianceStatus] = useState({ message: '', type: 'checking' });
 
   const sensors = useSensors(
@@ -121,6 +120,11 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
   );
 
   const getDateRange = () => {
+    // FIX: Handle 'all' to show everything
+    if (dateRange === 'all') {
+      return { start: null, end: null };
+    }
+
     const today = new Date();
     let start, end;
     if (dateRange === 'thisWeek') {
@@ -154,7 +158,23 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
     return true;
   };
 
-  filteredResults
+  const filteredResults = useMemo(() => {
+    const { start, end } = getDateRange();
+    return roster.filter(shift => {
+      if (start && end) {
+        const shiftDate = new Date(shift.date);
+        if (shiftDate < start || shiftDate > end) return false;
+      }
+      if (selectedEmployee !== 'all') {
+        const emp = employees.find(e => e.id === shift.user_id);
+        if (!emp || emp.name !== selectedEmployee) return false;
+      }
+      if (selectedBranch !== 'all' && shift.branch_name !== selectedBranch) return false;
+      if (selectedDays.length > 0 && !selectedDays.includes(shift.day)) return false;
+      if (!matchesTimeOfDay(shift.start_time)) return false;
+      return true;
+    });
+  }, [roster, dateRange, customStartDate, customEndDate, selectedEmployee, selectedBranch, selectedDays, selectedTimeOfDay, employees]);
 
   const handleDragStart = (event) => { setActiveId(event.active.id); setActiveShift(event.active.data.current.shift); };
   const handleDragOver = (event) => setOverId(event.over?.id || null);
@@ -277,7 +297,7 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
         const f = data.filters;
         setSelectedEmployee(f.employee || 'all'); setSelectedBranch(f.branch || 'all');
         setSelectedDays(f.days || []); setSelectedTimeOfDay(f.timeOfDay || 'all');
-        setDateRange(f.dateRange || 'nextWeek'); setCustomStartDate(''); setCustomEndDate('');
+        setDateRange(f.dateRange || 'all'); setCustomStartDate(''); setCustomEndDate('');
         setNaturalQuery('');
       } else {
         setParseError(data.error || 'Could not parse query.');
@@ -288,15 +308,15 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
   const toggleDay = (day) => setSelectedDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
 
   const clearAllFilters = () => {
-    // FIX: Reset to 'nextWeek' to match default
-    setDateRange('nextWeek'); setCustomStartDate(''); setCustomEndDate('');
+    // FIX: Reset to 'all'
+    setDateRange('all'); setCustomStartDate(''); setCustomEndDate('');
     setSelectedEmployee('all'); setSelectedBranch('all'); setSelectedDays([]);
     setSelectedTimeOfDay('all'); setParseError('');
   };
 
   const getActiveFiltersCount = () => {
     let count = 0;
-    if (dateRange !== 'nextWeek') count++;
+    if (dateRange !== 'all') count++;
     if (selectedEmployee !== 'all') count++;
     if (selectedBranch !== 'all') count++;
     if (selectedDays.length > 0) count++;
@@ -417,7 +437,7 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
           <div className="bg-z-surface rounded-2xl border border-z-border p-4 md:p-5 shadow-sm animate-[slideDown_0.2s_ease-out]">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: 'Date Range', value: dateRange, onChange: setDateRange, options: ['thisWeek', 'thisMonth', 'nextWeek', 'custom'] },
+                { label: 'Date Range', value: dateRange, onChange: setDateRange, options: ['all', 'thisWeek', 'thisMonth', 'nextWeek', 'custom'] },
                 { label: 'Employee', value: selectedEmployee, onChange: setSelectedEmployee, options: ['all', ...employees.filter(e => e.is_active).map(e => e.name)] },
                 { label: 'Branch', value: selectedBranch, onChange: setSelectedBranch, options: ['all', ...branches.map(b => b.name)] },
                 { label: 'Time of Day', value: selectedTimeOfDay, onChange: setSelectedTimeOfDay, options: ['all', 'morning', 'afternoon', 'evening', 'night'] }
@@ -428,7 +448,7 @@ const ScheduleQuery = ({ roster, employees, branches }) => {
                     <select value={filter.value} onChange={(e) => filter.onChange(e.target.value)} className="w-full appearance-none px-3 py-2.5 bg-z-page border border-z-border rounded-xl text-sm text-z-text focus:outline-none focus:border-z-purple focus:ring-1 focus:ring-z-purple/20 transition-all cursor-pointer">
                       {filter.options.map(opt => (
                         <option key={opt} value={opt}>
-                          {opt === 'all' ? `All ${filter.label}s` : opt === 'thisWeek' ? 'This Week' : opt === 'thisMonth' ? 'This Month' : opt === 'nextWeek' ? 'Next Week' : opt === 'custom' ? 'Custom Range' : opt.charAt(0).toUpperCase() + opt.slice(1)}
+                          {opt === 'all' ? (filter.label === 'Date Range' ? 'All Time' : `All ${filter.label}s`) : opt === 'thisWeek' ? 'This Week' : opt === 'thisMonth' ? 'This Month' : opt === 'nextWeek' ? 'Next Week' : opt === 'custom' ? 'Custom Range' : opt.charAt(0).toUpperCase() + opt.slice(1)}
                         </option>
                       ))}
                     </select>
