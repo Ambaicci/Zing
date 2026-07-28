@@ -7,7 +7,7 @@ module.exports = {
   theme: {
     extend: {
       // Hercules-Inspired Deep Dark Color Palette
-      colors: {
+               colors: {
         z: {
           page: '#09090b',         // Deepest background (Zinc 950)
           bg: '#111113',           // App background (Slightly lighter charcoal)
