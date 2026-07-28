@@ -1,21 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Global Base Styles for Zing */
-body {
-  background-color: #050506; /* z-page */
-  color: #f2f1ed; /* z-text */
-  font-family: 'Inter', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
+:root {
+  --font-geist-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-jetbrains-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-/* Hide scrollbars for that clean iOS app feel */
-::-webkit-scrollbar {
-  display: none;
+/* Base styles for Hercules-inspired aesthetic */
+body {
+  font-family: var(--font-geist-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
-* {
-  scrollbar-width: none;
+
+/* Ensure monospace elements use the new precise font */
+code, pre, .font-mono {
+  font-family: var(--font-jetbrains-mono);
 }

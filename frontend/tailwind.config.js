@@ -1,37 +1,60 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
+      // Zing Design System Colors (Dark Mode Optimized)
       colors: {
         z: {
-          bg: '#0c0d10',
-          page: '#050506',
-          surface: '#1a1b1f',
-          'surface-hi': '#232429',
-          border: '#2b2c31',
-          text: '#f2f1ed',
-          'text-dim': '#8a8b92',
-          'text-faint': '#57585f',
-          blue: '#0a84ff',
-          green: '#32d74b',
-          orange: '#ff9f0a',
-          purple: '#bf5af2',
-          red: '#ff453a',
-        }
+          page: '#09090b',         // Deepest background
+          bg: '#111113',           // App background
+          surface: '#1e1e24',      // Card/Panel background
+          'surface-hi': '#2a2a35', // Hover states
+          border: '#2e2e3b',       // Borders
+          text: '#f4f4f5',         // Primary text
+          'text-dim': '#a1a1aa',   // Secondary text
+          'text-faint': '#71717a', // Tertiary text
+          purple: '#a855f7',       // Primary brand
+          blue: '#3b82f6',         // Secondary brand
+          green: '#10b981',        // Success
+          red: '#ef4444',          // Error/Danger
+          orange: '#f97316',       // Warning
+        },
       },
+      
+      // Hercules-Inspired Typography
       fontFamily: {
-        display: ['"Space Grotesk"', 'sans-serif'],
-        body: ['"Inter"', 'sans-serif'],
-        mono: ['"IBM Plex Mono"', 'monospace'],
+        display: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
+        body: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-jetbrains-mono)', 'Fira Code', 'monospace'],
       },
+      
+      // Premium Letter Spacing
+      letterSpacing: {
+        tighter: '-0.04em', // For monumental headings
+        wide: '0.05em',     // For uppercase data labels
+      },
+
+      // Custom Animations for GenUI Components
       animation: {
-        'pulse-slow': 'pulse 1.1s infinite ease-in-out',
-      }
+        'slideDown': 'slideDown 0.3s ease-out',
+        'fadeIn': 'fadeIn 0.2s ease-out',
+      },
+      keyframes: {
+        slideDown: {
+          '0%': { transform: 'translateY(-10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
     },
   },
   plugins: [],
-}
+};
