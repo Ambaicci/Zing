@@ -6,26 +6,26 @@ module.exports = {
   ],
   theme: {
     extend: {
-      // Hercules-Inspired Deep Dark Color Palette
-               colors: {
+      // Hercules.app-Inspired Light Theme Color Palette
+      colors: {
         z: {
-          page: '#09090b',         // Deepest background (Zinc 950)
-          bg: '#111113',           // App background (Slightly lighter charcoal)
-          surface: '#1c1c1f',      // Card/Panel background (Rich dark gray)
-          'surface-hi': '#27272a', // Hover states & elevated surfaces (Zinc 800)
-          border: '#2e2e33',       // Subtle, low-contrast borders
-          text: '#fafafa',         // Primary text (Zinc 50 - crisp white)
-          'text-dim': '#a1a1aa',   // Secondary text (Zinc 400)
-          'text-faint': '#71717a', // Tertiary text / placeholders (Zinc 500)
-          purple: '#a855f7',       // Primary brand (Vibrant Purple)
-          blue: '#3b82f6',         // Secondary brand (Vibrant Blue)
-          green: '#10b981',        // Success (Vibrant Emerald)
-          red: '#ef4444',          // Error/Danger (Vibrant Red)
-          orange: '#f97316',       // Warning (Vibrant Orange)
+          page: '#fafafa',           // Light gray background (Zinc 50)
+          bg: '#ffffff',             // Pure white for cards/panels
+          surface: '#ffffff',        // White surfaces
+          'surface-hi': '#f4f4f5',   // Hover states (Zinc 100)
+          border: '#e4e4e7',         // Subtle borders (Zinc 300)
+          text: '#18181b',           // Primary text - dark navy (Zinc 950)
+          'text-dim': '#71717a',     // Secondary text (Zinc 500)
+          'text-faint': '#a1a1aa',   // Tertiary text (Zinc 400)
+          primary: '#5B5FF5',        // Vibrant indigo (Hercules blue)
+          'primary-dark': '#4F46E5', // Darker indigo for hover states
+          success: '#10b981',        // Emerald green
+          error: '#ef4444',          // Vibrant red
+          warning: '#f59e0b',        // Amber orange
         },
       },
       
-      // Premium Typography
+      // Premium Typography (Same as before)
       fontFamily: {
         display: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
         body: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
@@ -36,6 +36,12 @@ module.exports = {
       letterSpacing: {
         tighter: '-0.04em', 
         wide: '0.05em',     
+      },
+
+      // Subtle Shadows for Cards (Hercules.app style)
+      boxShadow: {
+        'hercules': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        'hercules-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
       },
 
       // Custom Animations for GenUI Components
