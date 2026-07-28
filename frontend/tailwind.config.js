@@ -1,9 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -35,8 +34,8 @@ module.exports = {
       
       // Authoritative Letter Spacing
       letterSpacing: {
-        tighter: '-0.04em', // For monumental headings
-        wide: '0.05em',     // For uppercase data labels
+        tighter: '-0.04em', 
+        wide: '0.05em',     
       },
 
       // Custom Animations for GenUI Components
