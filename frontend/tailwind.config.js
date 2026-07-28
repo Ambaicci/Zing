@@ -7,33 +7,33 @@ module.exports = {
   ],
   theme: {
     extend: {
-      // Zing Design System Colors (Dark Mode Optimized)
+      // Hercules-Inspired Deep Dark Color Palette
       colors: {
         z: {
-          page: '#09090b',         // Deepest background
-          bg: '#111113',           // App background
-          surface: '#1e1e24',      // Card/Panel background
-          'surface-hi': '#2a2a35', // Hover states
-          border: '#2e2e3b',       // Borders
-          text: '#f4f4f5',         // Primary text
-          'text-dim': '#a1a1aa',   // Secondary text
-          'text-faint': '#71717a', // Tertiary text
-          purple: '#a855f7',       // Primary brand
-          blue: '#3b82f6',         // Secondary brand
-          green: '#10b981',        // Success
-          red: '#ef4444',          // Error/Danger
-          orange: '#f97316',       // Warning
+          page: '#09090b',         // Deepest background (Zinc 950)
+          bg: '#111113',           // App background (Slightly lighter charcoal)
+          surface: '#1c1c1f',      // Card/Panel background (Rich dark gray)
+          'surface-hi': '#27272a', // Hover states & elevated surfaces (Zinc 800)
+          border: '#2e2e33',       // Subtle, low-contrast borders
+          text: '#fafafa',         // Primary text (Zinc 50 - crisp white)
+          'text-dim': '#a1a1aa',   // Secondary text (Zinc 400)
+          'text-faint': '#71717a', // Tertiary text / placeholders (Zinc 500)
+          purple: '#a855f7',       // Primary brand (Vibrant Purple)
+          blue: '#3b82f6',         // Secondary brand (Vibrant Blue)
+          green: '#10b981',        // Success (Vibrant Emerald)
+          red: '#ef4444',          // Error/Danger (Vibrant Red)
+          orange: '#f97316',       // Warning (Vibrant Orange)
         },
       },
       
-      // Hercules-Inspired Typography
+      // Premium Typography
       fontFamily: {
         display: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
         body: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['var(--font-jetbrains-mono)', 'Fira Code', 'monospace'],
       },
       
-      // Premium Letter Spacing
+      // Authoritative Letter Spacing
       letterSpacing: {
         tighter: '-0.04em', // For monumental headings
         wide: '0.05em',     // For uppercase data labels
