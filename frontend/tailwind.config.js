@@ -17,21 +17,22 @@ module.exports = {
           text: '#18181b',           // Primary text - dark navy (Zinc 950)
           'text-dim': '#71717a',     // Secondary text (Zinc 500)
           'text-faint': '#a1a1aa',   // Tertiary text (Zinc 400)
-          primary: '#5B5FF5',        // Vibrant indigo (Hercules blue)
-          'primary-dark': '#4F46E5', // Darker indigo for hover states
-          success: '#10b981',        // Emerald green
-          error: '#ef4444',          // Vibrant red
-          warning: '#f59e0b',        // Amber orange
+          // Restoring the exact names your components use!
+          purple: '#5B5FF5',         // Hercules Indigo (Primary Brand)
+          blue: '#3b82f6',           // Vibrant Blue (Secondary)
+          green: '#10b981',          // Emerald Green (Success)
+          red: '#ef4444',            // Vibrant Red (Error)
+          orange: '#f97316',         // Vibrant Orange (Warning)
         },
       },
-      
-      // Premium Typography (Same as before)
+
+      // Premium Typography
       fontFamily: {
         display: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
         body: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['var(--font-jetbrains-mono)', 'Fira Code', 'monospace'],
       },
-      
+
       // Authoritative Letter Spacing
       letterSpacing: {
         tighter: '-0.04em', 
@@ -44,7 +45,7 @@ module.exports = {
         'hercules-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
       },
 
-      // Custom Animations for GenUI Components
+      // Custom Animations
       animation: {
         'slideDown': 'slideDown 0.3s ease-out',
         'fadeIn': 'fadeIn 0.2s ease-out',
